@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<sub-flow name="impl-email-process:impl-email-flow:subflow" doc:id="4059c142-5256-4ae6-abf4-4ff2877169ea" >
+		<logger level="INFO" doc:name="Logger Start Creating Payload for Email Notification" doc:id="7ff58d61-5c2f-4920-973f-c27d74442030" message="Start Creating Payload for Email Notification"/>
+		<ee:transform doc:name="Create Email Payload" doc:id="42c58ec4-c760-4735-ad85-2aecf5fb083f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json skipNullOn="everywhere"
+var senderAddress = Mule::p('email.senderAddress')
+var defaultSubject = Mule::p('error.notification.subject')
+var opening = Mule::p('error.notification.opening')
+var defaultMessage = Mule::p('error.notification.message')
+var extraMessage = vars.emailPayload.message default ""
+var closing = Mule::p('error.notification.closing')
+var errorPayload = vars.payloadVar default ""
+var newline = Mule::p('error.notification.newline')
+---
+{
+    "senderAddress": senderAddress,
+    "recipientAddresses": [
+    	vars.emailPayload.recipientAddresses
+    ],
+    "ccAddresses": [
+    	vars.emailPayload.ccAddresses
+    ],
+    "bccAddresses": [
+        vars.emailPayload.bccAddresses
+    ],
+    "subject": vars.emailPayload.subject default defaultSubject,
+    "message": opening ++ defaultMessage ++ errorPayload ++ newline ++ extraMessage ++ newline ++ closing
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="email-sys-api:email-sys-api:subflow" doc:id="4e318980-5b69-4539-8f8d-bcb859c8a735" name="email-sys-api:email-sys-api:subflow"/>
+		<logger level="INFO" doc:name="Logger End Creating Payload for Email Notification" doc:id="ad3a4059-da51-4bf7-ac9f-647a171f02a7" message="End Creating Payload for Email Notification"/>
+	</sub-flow>
+</mule>

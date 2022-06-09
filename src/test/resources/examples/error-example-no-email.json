@@ -1,0 +1,17 @@
+{
+	"error": {
+		"systemContext": "CEDS",
+		"payload": {
+			"additionalDetails": "additionalDetails"
+		},
+		"dateTimestamp": "2021-12-08T04:07:05",
+		"code": "500",
+		"scope": "",
+		"message": "Error is happening",
+		"description": "error description",
+		"refId": "",
+		"localId": "",
+		"SIFObjectName": "",
+		"correlationId": 123
+	}
+}

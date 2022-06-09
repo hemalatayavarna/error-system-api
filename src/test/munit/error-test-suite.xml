@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+	<munit:config name="error-test-suite.xml" />
+	<munit:test name="error-test-suiteTest:email" doc:id="06093e89-978f-41e9-8929-4719b56fc7d7" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when db:insert" doc:id="4281fbd4-b6e8-4e12-b904-5f99c4a90be7" processor="db:insert">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Insert to ErrorDB" attributeName="doc:name" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock when http:request" doc:id="bd86252f-028f-43cb-906d-005908590bbc" processor="http:request">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Send Email Payload to Email Gateway System API" attributeName="doc:name" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="Set Event error-example.json" doc:id="84f5f3fe-445d-44d3-bc1c-f9e7964f736f" >
+				<munit:payload value="#[MunitTools::getResourceAsString('examples/error-example.json')]" mediaType="application/json" />
+			</munit:set-event>
+			<flow-ref doc:name="sys-error-api-errorFlow" doc:id="f2dfe586-89bd-4956-855b-5f47a65afc4a" name="sys-error-api-errorFlow"/>
+			<!-- <flow-ref doc:name="impl-error-process:error-process:subflow" doc:id="9494d611-0e69-4e27-9dbf-3c6c9b68f3ee" name="impl-error-process:error-process:subflow"/> -->
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:verify-call doc:name="Verify call  END Error MQ" doc:id="6f03b212-206b-4ca0-a17a-ad955bcda5a2" processor="logger">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="New Logged Transformed Payload" attributeName="doc:name" />
+				</munit-tools:with-attributes>
+			</munit-tools:verify-call>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="error-test-suiteTest:email-error" doc:id="1566afbf-4bc1-49c3-a78c-1bb1c47e5f5a" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when db:insert" doc:id="6959f4f3-b300-4e32-a91f-b4f4e52c9d9b" processor="db:insert">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Insert to ErrorDB" attributeName="doc:name" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock when HTTP:CONNECTIVITY" doc:id="c850edf2-5939-4685-9604-298137f85b6c" processor="http:request">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Send Email Payload to Email Gateway System API" attributeName="doc:name" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:error typeId="HTTP:CONNECTIVITY" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+	
+		
+</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="Set Event error-example.json" doc:id="a78daf40-49b8-490c-bf92-3867b8d26fa5" >
+				<munit:payload value="#[MunitTools::getResourceAsString('examples/error-example.json')]" mediaType="application/json" />
+			</munit:set-event>
+			<flow-ref doc:name="sys-error-api-errorFlow" doc:id="0dd350db-d391-4808-927e-a57a4c358300" name="sys-error-api-errorFlow"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:verify-call doc:name="Verify call  END Error MQ" doc:id="3f0e6df0-0f04-46f8-b06b-8ea68bf71cd1" processor="logger">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Log ANY Generic Error Message" attributeName="doc:name" />
+				</munit-tools:with-attributes>
+
+			</munit-tools:verify-call>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="error-test-suiteTest:no-email" doc:id="803645fd-092d-478f-a2a4-cdbb5009aaa2" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when db:insert" doc:id="4bb64e5a-21de-4e58-b2cc-7cbd2db77372" processor="db:insert">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Insert to ErrorDB" attributeName="doc:name" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock when http:request" doc:id="f3d1fd14-235b-4aa6-93b1-7bd8c38da62a" processor="http:request">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Send Email Payload to Email Gateway System API" attributeName="doc:name" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="Set Event error-example-no-email.json" doc:id="5876ca6d-e07c-4d23-a08f-10be35e38ca2" >
+				<munit:payload value="#[MunitTools::getResourceAsString('examples/error-example-no-email.json')]" mediaType="application/json" />
+
+			</munit:set-event>
+			<flow-ref doc:name="sys-error-api-errorFlow" doc:id="e5fef07d-646c-426b-99d3-22046e1a33b7" name="sys-error-api-errorFlow"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:verify-call doc:name="Verify call  END Error MQ" doc:id="4ec1f58b-c36b-4e70-bfc4-e956c1f5e80d" processor="logger">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="New Logged Transformed Payload" attributeName="doc:name" />
+				</munit-tools:with-attributes>
+			</munit-tools:verify-call>
+		</munit:validation>
+	</munit:test>
+
+</mule>

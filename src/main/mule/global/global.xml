@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<configuration-properties doc:name="Configuration properties" doc:id="80bae034-a9ea-4680-ae46-1621d663f1f0" file="config\sys-error-api.yaml" />
+	<http:listener-config name="sys_error_HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="5ebc35ea-128b-4d1c-8c5c-00a5ad4e66ac" >
+		<http:listener-connection host="${sys-error-api.host}" port="${sys-error-api.port}" />
+	</http:listener-config>
+	<jms:config name="sys_error_JMS_Config" doc:name="JMS Config" doc:id="0303dd85-9a38-4f67-8d3e-17ddd9b81271" >
+		<jms:generic-connection specification="JMS_2_0" username="${mq-error.username}" password="${mq-error.password}" >
+			<jms:connection-factory >
+				<jms:jndi-connection-factory connectionFactoryJndiName="ConnectionFactory" >
+					<jms:name-resolver-builder jndiInitialContextFactory="org.apache.activemq.artemis.jndi.ActiveMQInitialContextFactory" jndiProviderUrl="${mq-error.brokerurl}" />
+				</jms:jndi-connection-factory>
+			</jms:connection-factory>
+		</jms:generic-connection>
+		<jms:consumer-config >
+			<jms:consumer-type >
+				<jms:topic-consumer shared="true" subscriptionName="${error.subs}" />
+			</jms:consumer-type>
+		</jms:consumer-config>
+		<jms:producer-config timeToLive="${mq.timetolive}" />
+	</jms:config>
+	<db:config name="sys_error_Database_Config" doc:name="Database Config" doc:id="7b07c215-f398-42ce-b91d-da9f85ae4718" >
+		<db:mssql-connection host="${errordb.host}" instanceName="${errordb.instancename}" port="${errordb.port}" user="${errordb.user}" password="${errordb.pwd}" databaseName="${errordb.name}"/>
+	</db:config>
+	<jms:config name="DLQ_JMS_Config" doc:name="JMS Config" doc:id="52ea93d8-235c-4758-a968-607a26a05181" >
+		<jms:generic-connection specification="JMS_2_0" username="${mq-error.username}" password="${mq-error.password}">
+			<jms:connection-factory >
+				<jms:jndi-connection-factory connectionFactoryJndiName="ConnectionFactory" >
+					<jms:name-resolver-builder jndiInitialContextFactory="org.apache.activemq.artemis.jndi.ActiveMQInitialContextFactory" jndiProviderUrl="${mq-error.brokerurl}"/>
+				</jms:jndi-connection-factory>
+			</jms:connection-factory>
+		</jms:generic-connection>
+		<jms:producer-config timeToLive="${mq.timetolive}" />
+	</jms:config>
+	<http:request-config
+		name="email-system-api-private-httpRequesterConfig"
+		doc:name="HTTP Request configuration"
+		doc:id="ba4f2397-741c-4dbc-b3c3-bd0f414ac2a7"
+		basePath="${email.sys.api.basepath}"
+		responseTimeout="${email.sys.api.response.timeout}">
+		<http:request-connection
+			protocol="${email.sys.api.protocol}"
+			host="${email.sys.api.host}" port="${email.sys.api.port}"
+			maxConnections="${email.sys.api.maxconnections}"
+			connectionIdleTimeout="${email.sys.api.timeout}"
+			responseBufferSize="${email.sys.api.bufferSize}">
+			<reconnection >
+				<reconnect frequency="${email.sys.reconnection.frequency}" count="${email.sys.reconnection.attempts}" />
+			</reconnection>
+		</http:request-connection>
+	</http:request-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="a4fa560a-b632-44b7-abeb-80ba9fe51a05" file="config\app-config-global.properties" />
+</mule>

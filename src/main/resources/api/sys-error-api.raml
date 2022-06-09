@@ -1,0 +1,16 @@
+#%RAML 1.0
+title: Error System Application
+description: This application connects to the Error database for different operations
+protocols: [HTTP, HTTPS]
+mediaType: application/json
+
+/health:
+  get:
+    displayName: Get Health
+    description: returns the status of this application
+    responses:
+        200:
+          body:
+            application/json:
+              example: "OK"
+                

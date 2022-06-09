@@ -1,0 +1,28 @@
+errordb:
+  host: "EDUAZD08"
+  instancename: ""
+  port: "1433"
+  user: "IDP_OPS"
+  pwd: "do8Xidt57wQUa5jy"
+  name: "ERROR"
+  frequency: "30000"
+
+sys-error-api:    
+  host: "0.0.0.0"
+  port: "8099"
+  systemContext: "ERRORTOPIC"
+  
+mq-error:    
+  brokerurl: "tcp://localhost:61616?confirmationWindowSize=1048576"
+  username: "admin"
+  password: "admin"
+  frequency: "30000"
+  version: "2.11.0"
+
+mq:
+  timetolive: "300000"
+error:
+  name: "ERRORTOPIC"
+  subs: "sys-error-api"
+  dlq: "DLQ"
+  expiryQueue: "ExpiryQueue"

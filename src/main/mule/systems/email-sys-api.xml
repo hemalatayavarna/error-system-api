@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<sub-flow name="email-sys-api:email-sys-api:subflow" doc:id="e1105876-4651-4496-8d76-59e661e08a9d" >
+		<logger level="INFO" doc:name="Log Start Email Gateway System API" doc:id="e2ad0bd2-8e0e-497f-acb3-9760d3a63c39" message="Start Email Gateway System API"/>
+		<http:request method="POST" doc:name="Send Email Payload to Email Gateway System API" doc:id="f83d9b54-20e9-44f6-b003-479c130a9c32" config-ref="email-system-api-private-httpRequesterConfig" path="${email.sys.api.path}" sendCorrelationId="ALWAYS"/>
+		<logger level="INFO" doc:name="Log End Email Gateway System API" doc:id="a35d2c71-c9b4-477a-859f-bea90b9e1edd" message="End Email Gateway System API"/>
+	</sub-flow>
+</mule>

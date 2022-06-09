@@ -1,0 +1,13 @@
+{   "ErrorDateTime":"",
+	"CorrelationId":"",
+	"ErrorCode":"",
+	"ErrorMessageDescription":"",
+	"Component":"",
+	"SystemContext":"",
+	"ObjectName":"",
+	"ObjectRefId":"",
+	"ObjectLocalId":"",
+	"Payload":"",
+	"OtherErrorInfo":"",
+	"InsertDateTime":""
+}	

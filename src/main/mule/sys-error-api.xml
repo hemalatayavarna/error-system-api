@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config
+		name="sys-error-api-httpListenerConfig">
+		<http:listener-connection host="0.0.0.0"
+			port="8098" />
+	</http:listener-config>
+	<apikit:config name="sys-error-api-config"
+		api="sys-error-api.raml" outboundHeadersMapName="outboundHeaders"
+		httpStatusVarName="httpStatus" />
+	<flow name="sys-error-api-main">
+		<http:listener
+			config-ref="sys_error_HTTP_Listener_config" path="/api/*">
+			<http:response
+				statusCode="#[vars.httpStatus default 200]">
+				<http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+			</http:response>
+			<http:error-response
+				statusCode="#[vars.httpStatus default 500]">
+				<http:body><![CDATA[#[payload]]]></http:body>
+				<http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+			</http:error-response>
+		</http:listener>
+		<apikit:router config-ref="sys-error-api-config" />
+		<error-handler ref="Global_Error_Handler">
+		</error-handler>
+	</flow>
+	<flow name="get:\health:sys-error-api-config">
+		<logger level="TRACE" doc:name="Health Log Started"
+			doc:id="ea7ce6f2-b77d-441e-b8c3-ced732eb0430"
+			message='"START get:\health:sys-error-api-config"' />
+		<set-payload doc:name="Set Payload"
+			doc:id="a7e34137-cd7c-4ca5-917e-ec3b2b664a10"
+			value="'{&quot;health&quot;:&quot;OK!&quot;}'" />
+		<logger level="TRACE" doc:name="Health Log Ends"
+			doc:id="92fed3cb-6821-4ebe-a17c-d7c40fb22699"
+			message='"END get:\health:sys-error-api-config"' />
+	</flow>
+	<flow name="sys-error-api-errorFlow"
+		doc:id="a34d1aef-c860-45fc-a9fc-ae6e8fc8945b">
+		<jms:listener doc:name="Error Listener"
+			doc:id="834aa179-c8b5-471d-83df-4da5d9ccb314"
+			destination="${error.name}" config-ref="sys_error_JMS_Config"
+			ackMode="IMMEDIATE" inboundContentType="application/json">
+			<reconnect-forever
+				frequency="${mq-error.frequency}" />
+			<jms:consumer-type>
+				<jms:topic-consumer shared="true"
+					subscriptionName="${error.subs}" />
+			</jms:consumer-type>
+			<jms:response sendCorrelationId="ALWAYS"
+				outboundContentType="application/json" />
+		</jms:listener>
+		<logger level="INFO" doc:name=" Begin Error MQ "
+			doc:id="f2e2fe62-3924-4bf4-a27b-1abf38da463f"
+			message='Logger START Consume ERROR MQ Message' />
+		<flow-ref doc:name="impl-error-process:error-process:subflow"
+			doc:id="dee98607-7e73-4a4d-a877-6c1666df8d63"
+			name="impl-error-process:error-process:subflow" />
+		<logger level="INFO" doc:name=" END Error MQ"
+			doc:id="55981c48-7ecb-4217-8407-9d68c46897f9"
+			message='Logger END Consume ERROR MQ Message' />
+		<error-handler ref="business-error-handler" />
+	</flow>
+	<flow name="sys-error-api-dlqFlow"
+		doc:id="d1943afe-eaf9-47d5-8b72-358ae74f009a">
+		<jms:listener doc:name="DLQ Listener"
+			doc:id="938f27a5-32f2-4e49-a787-0f477e127ca6"
+			config-ref="DLQ_JMS_Config" destination="${error.dlq}"
+			ackMode="IMMEDIATE" inboundContentType="application/json">
+			<reconnect-forever
+				frequency="${mq-error.frequency}" />
+			<jms:consumer-type>
+				<jms:queue-consumer />
+			</jms:consumer-type>
+			<jms:response sendCorrelationId="ALWAYS" />
+		</jms:listener>
+		<logger level="INFO" doc:name="Received DLQ Message"
+			doc:id="6fab3589-690c-4071-b681-71c47ffe59ab"
+			message="Received DLQ Message" />
+		<logger level="DEBUG" doc:name="DLQ Payload Logged"
+			doc:id="dff1b0ac-d824-49b0-9a24-ccd74bf46809" message="#[payload]" />
+		<set-variable value='#[payload]' doc:name="payloaddlqVar"
+			doc:id="beeef851-0efa-4c99-bb0c-c16057939c81"
+			variableName="payloaddlqVar" mimeType="text/plain" />
+		<ee:transform doc:name="Transform Message"
+			doc:id="0c93cb60-2bb0-4d51-b4fc-dfc545396435">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"ErrorCode":"AMQ ERROR" as String,
+	"ErrorMessageDescription":if (isEmpty(attributes.properties.userProperties.'__AMQ_CID')) "" else attributes.properties.userProperties.'__AMQ_CID' as String,
+	"Component": "DLQ" as String,
+	"SystemContext": if (isEmpty(attributes.properties.userProperties.'_AMQ_ORIG_ADDRESS')) "" else attributes.properties.userProperties.'_AMQ_ORIG_ADDRESS' as String,
+	"ObjectRefId": "" as String,
+	"ObjectLocalId":"" as String,
+	"Payload": if (isEmpty(vars.payloaddlqVar)) "" else vars.payloaddlqVar as String,
+	"OtherErrorInfo": if (isEmpty(attributes.properties.userProperties.'_AMQ_ORIG_QUEUE')) "" else attributes.properties.userProperties.'_AMQ_ORIG_QUEUE' as String,
+	"CorrelationId": if (isEmpty(correlationId)) "" else correlationId as String,
+	"InsertDateTime":now(),
+	"ObjectName": "" as String,
+	"ErrorDateTime": ((attributes.headers.timestamp as Number/1000)) as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSS"}	
+}	
+]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logged Transformed Payload"
+			doc:id="1ab20f4c-cafc-41a6-9a4d-bd801d7f156b" message="#[payload]" />
+		<flow-ref doc:name="DLQ Payload Insert dlq-payload-insert"
+			doc:id="f571642c-aaa8-4ccb-9785-827bbfa91b07"
+			name="dlq-payload-insert" />
+	</flow>
+	<flow name="sys-error-api-ExpiryQueueFlow"
+		doc:id="a697b79a-7f71-4ed8-824d-30e08d98a755">
+		<jms:listener doc:name="ExpiryQueue Listener"
+			doc:id="85975fde-fbad-4141-8dfa-29918c010034"
+			config-ref="DLQ_JMS_Config" destination="${error.expiryQueue}"
+			ackMode="IMMEDIATE" inboundContentType="application/json">
+			<reconnect-forever
+				frequency="${mq-error.frequency}" />
+			<jms:consumer-type>
+				<jms:queue-consumer />
+			</jms:consumer-type>
+			<jms:response sendCorrelationId="ALWAYS" />
+		</jms:listener>
+		<logger level="INFO" doc:name="Received ExpiryQueue Message"
+			doc:id="c09c708c-e7f7-4277-8a8d-19301697e6cf"
+			message="Received ExpiryQueue Message" />
+		<logger level="DEBUG" doc:name="ExpiryQueue Payload Logged"
+			doc:id="c7a12227-7479-4395-8981-1c9005d967f7" message="#[payload]" />
+		<set-variable value='#[payload]' doc:name="payloaddlqVar"
+			doc:id="45c29b9d-bf28-459d-a834-b8c8a39ec942"
+			variableName="payloaddlqVar" mimeType="text/plain" />
+		<ee:transform doc:name="Transform Message"
+			doc:id="50545a79-e398-4b0e-8c3f-83eff35f3284">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var origQueue = if (isEmpty(attributes.properties.userProperties.'_AMQ_ORIG_QUEUE')) "" else attributes.properties.userProperties.'_AMQ_ORIG_QUEUE' as String
+var actualExpiry = if (isEmpty(attributes.properties.userProperties.'_AMQ_ACTUAL_EXPIRY')) "" else attributes.properties.userProperties.'_AMQ_ACTUAL_EXPIRY' as String
+var otherErrorInfo = origQueue ++ " " ++ actualExpiry
+---
+{
+	"ErrorCode":"AMQ ERROR" as String,
+	"ErrorMessageDescription":if (isEmpty(attributes.properties.userProperties.'__AMQ_CID')) "" else attributes.properties.userProperties.'__AMQ_CID' as String,
+	"Component": "ExpiryQueue" as String,
+	"SystemContext": if (isEmpty(attributes.properties.userProperties.'_AMQ_ORIG_ADDRESS')) "" else attributes.properties.userProperties.'_AMQ_ORIG_ADDRESS' as String,
+	"ObjectRefId": "" as String,
+	"ObjectLocalId":"" as String,
+	"Payload": if (isEmpty(vars.payloaddlqVar)) "" else vars.payloaddlqVar as String,
+	"OtherErrorInfo": otherErrorInfo,
+	"CorrelationId": if (isEmpty(correlationId)) "" else correlationId as String,
+	"InsertDateTime":now(),
+	"ObjectName": "" as String,
+	"ErrorDateTime": ((attributes.headers.timestamp as Number/1000)) as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSS"}
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logged Transformed Payload"
+			doc:id="8564dd0b-40ea-4e66-82d7-9453e4ccece0" message="#[payload]" />
+		<flow-ref
+			doc:name="ExpiryQueue Payload Insert dlq-payload-insert"
+			doc:id="254c02a7-4852-472d-9315-01d771491a04"
+			name="dlq-payload-insert" />
+	</flow>
+</mule>

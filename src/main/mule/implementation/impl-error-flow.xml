@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<sub-flow name="impl-error-process:error-process:subflow"
+		doc:id="b88634be-62b0-480d-b43a-db904d342456">
+		<logger level="INFO" doc:name="Log Incoming Error MQ Message"
+			doc:id="62c0a28b-bd3a-404e-b7e2-b83166a5ee40"
+			message='Incoming Error MQ message #[payload]' />
+		<set-variable value="#[payload.email]" doc:name="emailPayload" doc:id="069566ae-568b-49eb-8e4c-b0065570f4af" variableName="emailPayload"/>
+		<set-variable value="#[payload.error.payload]"
+			doc:name="payloadVar" doc:id="aedc2698-1b60-49ae-8589-385d6daf1b8d"
+			variableName="payloadVar" mimeType="text/plain" />
+		<set-variable doc:name="codeVar" doc:id="5e3e882d-4392-43ac-8a1b-ecf2ce095562"
+			variableName="codeVar" mimeType="text/plain" value="#[payload.error.code]"/>
+		<set-variable value="#[payload.error.message]"
+			doc:name="message" doc:id="66579e99-8f8a-4dab-a284-1efa77459f77"
+			variableName="message" mimeType="text/plain" />
+		<ee:transform doc:name="Set Payload"
+			doc:id="ff83f884-216b-43d4-b939-40374d951d1f">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var codeVar = if (isEmpty(vars.codeVar)) "" else vars.codeVar as String
+var errorDescription = if(isEmpty(payload.error.description)) "" else payload.error.description as String
+var errorMessageDescription = errorDescription ++ " : " ++  codeVar
+var errorDateTime = if(isEmpty(payload.error.dateTimestamp)) "" else (payload.error.dateTimestamp as String {format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"} >> p('property.timezone')) as DateTime {format: "yyyy-MM-dd'T'HH:mm:ss.SSS"}
+---
+{
+	
+	"ErrorCode": "API ERROR",
+	"ErrorMessageDescription": errorMessageDescription as String,
+	"Component": if (isEmpty(payload.error.scope)) "" else payload.error.scope as String,
+	"SystemContext": if (isEmpty(payload.error.systemContext)) "" else payload.error.systemContext as String,
+	"ObjectRefId": if (isEmpty(payload.error.refId)) "" else payload.error.refId as String,
+	"ObjectLocalId": if (isEmpty(payload.error.localId)) "" else payload.error.localId as String,
+	"Payload": if (isEmpty(vars.payloadVar)) "" else vars.payloadVar as String,
+	"OtherErrorInfo": if (isEmpty(vars.message)) "" else vars.message as String,
+	"CorrelationId": if (isEmpty(payload.error.correlationId)) "" else payload.error.correlationId as String,
+	"InsertDateTime":now(),
+	"ObjectName": if(isEmpty(payload.error.SIFObjectName)) "" else payload.error.SIFObjectName as String,
+	"ErrorDateTime": errorDateTime
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Error Payload Insert error-payload-insert" doc:id="054b9679-62a3-451b-b1a6-5936ef6d5772" name="error-payload-insert" />
+		<choice doc:name="Choice" doc:id="944e3e7e-011c-4d60-9452-a5718ece0277" >
+			<when expression='#[vars.emailPayload != null]'>
+				<flow-ref doc:name="impl-email-process:impl-email-flow:subflow" doc:id="d3740182-d882-4bc3-8a4c-ab8d99d7084e" name="impl-email-process:impl-email-flow:subflow"/>
+			</when>
+			<otherwise >
+				<logger level="TRACE" doc:name="Not sending Email (TRACE)" doc:id="bb39c508-8a89-4786-b9b2-282c89a17ade" message="Not sending Email"/>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="New Logged Transformed Payload"
+			doc:id="a1fade50-98ab-4c73-b69a-6093e95c0c02"
+			message="New Error Payload #[payload]" />
+	</sub-flow>
+</mule>

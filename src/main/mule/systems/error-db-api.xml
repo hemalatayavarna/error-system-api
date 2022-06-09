@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<flow name="error-payload-insert" doc:id="70db75ef-d7be-4e44-a6b4-fc565b61b63b" >
+		<logger level="DEBUG" doc:name="Transformed Error Payload Logged" doc:id="d8e5e7c1-c265-4aba-8cd2-ecaef32d0dad" message="#[payload]"/>
+		<flow-ref doc:name="Insert ErrorTopic to DB db-manager:\inserttodb" doc:id="0abb933a-09c6-4bfe-b8dd-0c0f66fa19d9" name="db-manager:\inserttodb"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="2f488c48-8212-401f-89f1-e278db5beb6c" type="ANY">
+				<logger level="ERROR" doc:name="Error Topic Logged" doc:id="2a90866f-002d-4a38-8a91-216be65748f0" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="dlq-payload-insert" doc:id="7734a0c4-deab-4cb2-9918-7b28ee979f17" >
+		<logger level="DEBUG" doc:name="Transformed DLQ Payload Logged" doc:id="11ad90da-bc7a-45b6-bd4b-48d860cc1ff9" message="#[payload]"/>
+		<flow-ref doc:name="Insert Dlq to DB db-manager:\inserttodb" doc:id="016796fc-1e4c-4948-b046-e9842fc05c8c" name="db-manager:\inserttodb"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="4c7c84aa-fdaf-4409-b8a9-3b496248f73b" type="ANY">
+				<logger level="ERROR" doc:name="DLQ / Expiry Error Logged" doc:id="dd65e60f-843e-47fd-bdb1-2a1c1c22068c" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="db-manager:\inserttodb" doc:id="27d030f2-0e53-44a2-b683-ada249f456a2" >
+		<logger level="DEBUG" doc:name="Logged Transformed Payload" doc:id="c44d18dd-57f0-4934-964a-d082cc770289" message="#[payload]"/>
+		<db:insert doc:id="997f3981-4133-45e6-ba7e-556ff297c420" doc:name="Insert to ErrorDB" config-ref="sys_error_Database_Config">
+			<reconnect-forever frequency="${errordb.frequency}" />
+			<db:sql >insert into IDPERROR.tbl_IDPERROR_ErrorLog(ErrorDateTime,CorrelationId,ErrorCode,ErrorMessageDescription,Component,SystemContext,ObjectName,ObjectRefId,ObjectLocalId,Payload,OtherErrorInfo,InsertDateTime)
+Values(:ErrorDateTime,:CorrelationId,:ErrorCode,:ErrorMessageDescription,:Component,:SystemContext,:ObjectName,:ObjectRefId,:ObjectLocalId,:Payload,:OtherErrorInfo,:InsertDateTime)</db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	"ErrorDateTime": payload.ErrorDateTime,
+	"CorrelationId":payload.CorrelationId,
+	"ErrorCode": payload.ErrorCode,
+	"ErrorMessageDescription": payload.ErrorMessageDescription,
+	"Component": payload.Component,
+	"SystemContext": payload.SystemContext,
+	"ObjectName": payload.ObjectName,
+	"ObjectRefId": payload.ObjectRefId,
+	"ObjectLocalId": payload.ObjectLocalId,
+	"Payload": payload.Payload,
+	"OtherErrorInfo": payload.OtherErrorInfo,
+	"InsertDateTime": payload.InsertDateTime
+}]]]></db:input-parameters>
+		</db:insert>
+	</flow>
+</mule>
